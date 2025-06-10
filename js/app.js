@@ -172,15 +172,18 @@ class AudioQRGenerator {
             item.className = 'audio-item';
             item.innerHTML = `
                 <div class="file-info">
-                    <h4 title="${fileName}">${fileName}</h4>
-                    <div class="file-meta">
-                        <span class="file-size">📁 ${fileSize} MB</span>
-                        <span class="file-date">🕒 ${lastModified}</span>
-                    </div>
+                    <input type="checkbox" class="qr-checkbox" id="checkbox-${index}" onchange="generator.updateSelection()">
+                    <label for="checkbox-${index}">
+                        <h4 title="${fileName}">${fileName}</h4>
+                        <div class="file-meta">
+                            <span class="file-size">📁 ${fileSize} MB</span>
+                            <span class="file-date">🕒 ${lastModified}</span>
+                        </div>
+                    </label>
                 </div>
                 <div class="qr-section">
                     <div class="qr-container">
-                        <canvas id="qr-${index}" width="150" height="150"></canvas>
+                        <canvas id="qr-${index}" width="200" height="200"></canvas>
                         <div class="qr-status" id="status-${index}">未生成</div>
                     </div>
                     <div class="qr-actions">
@@ -222,24 +225,32 @@ class AudioQRGenerator {
             // 生成二维码
             const canvas = document.getElementById(`qr-${index}`);
             await QRCode.toCanvas(canvas, playUrl, {
-                width: 150,
-                height: 150,
+                width: 200,
+                height: 200,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.M,
-                margin: 1
+                margin: 4
             });
             
             // 保存二维码数据
-            this.qrCodes.set(index, canvas.toDataURL());
+            this.qrCodes.set(index, {
+                dataURL: canvas.toDataURL(),
+                fileName: file.Key.split('/').pop().replace(/\.[^/.]+$/, ""),
+                playUrl: playUrl
+            });
             
             // 更新状态
             statusElement.textContent = '已生成';
             statusElement.className = 'qr-status generated';
             
+            // 自动选中生成的二维码
+            const checkbox = document.getElementById(`checkbox-${index}`);
+            checkbox.checked = true;
+            
             // 更新计数
             this.generatedCount++;
             this.updateStats();
+            this.updateSelection();
             
         } catch (error) {
             console.error('二维码生成失败:', error);
@@ -247,6 +258,75 @@ class AudioQRGenerator {
             statusElement.textContent = '生成失败';
             statusElement.className = 'qr-status error';
             this.showMessage(`二维码生成失败: ${error.message}`, 'error');
+        }
+    }
+
+    // 更新选择状态
+    updateSelection() {
+        const checkboxes = document.querySelectorAll('.qr-checkbox');
+        const checked = document.querySelectorAll('.qr-checkbox:checked');
+        const selectedCount = checked.length;
+        
+        // 更新全选按钮文本
+        const selectAllBtn = document.querySelector('button[onclick="selectAllQR()"]');
+        if (selectAllBtn) {
+            if (selectedCount === 0) {
+                selectAllBtn.textContent = '☑️ 全选二维码';
+            } else if (selectedCount === checkboxes.length) {
+                selectAllBtn.textContent = '🔲 取消全选';
+            } else {
+                selectAllBtn.textContent = `☑️ 已选${selectedCount}个`;
+            }
+        }
+        
+        // 更新下载选中按钮状态
+        const downloadSelectedBtn = document.querySelector('button[onclick="downloadSelectedQR()"]');
+        if (downloadSelectedBtn) {
+            downloadSelectedBtn.disabled = selectedCount === 0;
+            downloadSelectedBtn.textContent = selectedCount > 0 ? `📦 下载选中(${selectedCount})` : '📦 下载选中';
+        }
+    }
+
+    // 全选/取消全选二维码
+    selectAllQR() {
+        const checkboxes = document.querySelectorAll('.qr-checkbox');
+        const checkedCount = document.querySelectorAll('.qr-checkbox:checked').length;
+        const shouldSelectAll = checkedCount !== checkboxes.length;
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = shouldSelectAll;
+        });
+        
+        this.updateSelection();
+        this.showMessage(shouldSelectAll ? '已全选所有二维码' : '已取消全选', 'info');
+    }
+
+    // 下载选中的二维码
+    async downloadSelectedQR() {
+        const checkedBoxes = document.querySelectorAll('.qr-checkbox:checked');
+        let downloadCount = 0;
+        
+        for (const checkbox of checkedBoxes) {
+            const index = parseInt(checkbox.id.replace('checkbox-', ''));
+            if (this.qrCodes.has(index)) {
+                const qrData = this.qrCodes.get(index);
+                
+                const link = document.createElement('a');
+                link.download = `${qrData.fileName}_qr.png`;
+                link.href = qrData.dataURL;
+                link.click();
+                
+                downloadCount++;
+                
+                // 添加延迟避免浏览器阻止多个下载
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+        }
+        
+        if (downloadCount === 0) {
+            this.showMessage('没有可下载的二维码，请先生成二维码', 'warning');
+        } else {
+            this.showMessage(`已下载 ${downloadCount} 个二维码`, 'success');
         }
     }
 
@@ -265,18 +345,18 @@ class AudioQRGenerator {
 
     // 下载单个二维码
     downloadSingleQR(index, fileName) {
-        const canvas = document.getElementById(`qr-${index}`);
         if (!this.qrCodes.has(index)) {
             this.showMessage('请先生成二维码', 'warning');
             return;
         }
 
+        const qrData = this.qrCodes.get(index);
         const link = document.createElement('a');
-        link.download = `${fileName}_qr.png`;
-        link.href = canvas.toDataURL();
+        link.download = `${fileName || qrData.fileName}_qr.png`;
+        link.href = qrData.dataURL;
         link.click();
         
-        this.showMessage(`二维码已下载: ${fileName}_qr.png`, 'success');
+        this.showMessage(`二维码已下载: ${fileName || qrData.fileName}_qr.png`, 'success');
     }
 
     // 批量下载所有二维码
@@ -285,9 +365,13 @@ class AudioQRGenerator {
         
         for (let i = 0; i < this.audioFiles.length; i++) {
             if (this.qrCodes.has(i)) {
-                const file = this.audioFiles[i];
-                const fileName = file.Key.split('/').pop().replace(/\.[^/.]+$/, "");
-                this.downloadSingleQR(i, fileName);
+                const qrData = this.qrCodes.get(i);
+                
+                const link = document.createElement('a');
+                link.download = `${qrData.fileName}_qr.png`;
+                link.href = qrData.dataURL;
+                link.click();
+                
                 downloadCount++;
                 
                 // 添加延迟避免浏览器阻止多个下载
@@ -376,6 +460,14 @@ function downloadAllQR() {
 
 function clearAll() {
     generator.clearAll();
+}
+
+function selectAllQR() {
+    generator.selectAllQR();
+}
+
+function downloadSelectedQR() {
+    generator.downloadSelectedQR();
 }
 
 // 页面加载完成后的初始化
