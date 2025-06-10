@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频播放器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .player-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            padding: 40px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .audio-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .audio-title {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-weight: 700;
+            word-break: break-word;
+            line-height: 1.3;
+        }
+
+        .audio-subtitle {
+            color: #6c757d;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+
+        .audio-player {
+            width: 100%;
+            margin: 30px 0;
+            border-radius: 15px;
+            outline: none;
+        }
+
+        .audio-player::-webkit-media-controls-panel {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
+        }
+
+        .error-message {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            color: #721c24;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #ff6b6b;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #6c757d;
+            margin: 20px 0;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .audio-info {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        .info-value {
+            color: #495057;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .player-container {
+                padding: 30px 20px;
+                border-radius: 20px;
+            }
+            
+            .audio-title {
+                font-size: 1.5rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .audio-icon {
+                font-size: 3rem;
+            }
+            
+            .audio-title {
+                font-size: 1.3rem;
+            }
+            
+            .player-container {
+                padding: 25px 15px;
+            }
+        }
+
+        /* 暗色模式支持 */
+        @media (prefers-color-scheme: dark) {
+            .player-container {
+                background: rgba(33, 37, 41, 0.95);
+                color: #f8f9fa;
+            }
+            
+            .audio-title {
+                color: #f8f9fa;
+            }
+            
+            .audio-info {
+                background: rgba(52, 58, 64, 0.8);
+            }
+            
+            .info-value {
+                color: #dee2e6;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container">
+        <div class="audio-icon">🎵</div>
+        <h1 class="audio-title" id="audioTitle">音频播放器</h1>
+        <p class="audio-subtitle">扫码播放音频</p>
+        
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        <div id="loadingMessage" class="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <span>加载中...</span>
+        </div>
+        
+        <audio id="audioPlayer" class="audio-player" controls preload="metadata" style="display: none;">
+            您的浏览器不支持音频播放。
+        </audio>
+        
+        <div id="audioInfo" class="audio-info" style="display: none;">
+            <div class="info-item">
+                <span class="info-label">文件大小:</span>
+                <span class="info-value" id="fileSize">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">音频时长:</span>
+                <span class="info-value" id="duration">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">播放次数:</span>
+                <span class="info-value" id="playCount">1</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" onclick="shareAudio()">
+                📤 分享音频
+            </button>
+            <button class="btn btn-secondary" onclick="downloadAudio()">
+                📥 下载音频
+            </button>
+            <button class="btn btn-secondary" onclick="goBack()">
+                🔙 返回
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class AudioPlayer {
+            constructor() {
+                this.audioUrl = null;
+                this.audioTitle = null;
+                this.playCount = 0;
+                this.init();
+            }
+
+            // 初始化播放器
+            init() {
+                const params = this.getUrlParams();
+                this.audioUrl = params.audio;
+                this.audioTitle = params.title;
+
+                if (!this.audioUrl) {
+                    this.showError('未找到音频文件，请检查链接是否正确。');
+                    return;
+                }
+
+                this.setupPlayer();
+                this.loadAudio();
+            }
+
+            // 解析URL参数
+            getUrlParams() {
+                const params = new URLSearchParams(window.location.search);
+                return {
+                    audio: params.get('audio'),
+                    title: params.get('title')
+                };
+            }
+
+            // 设置播放器
+            setupPlayer() {
+                const audioPlayer = document.getElementById('audioPlayer');
+                const audioTitle = document.getElementById('audioTitle');
+                
+                // 设置标题
+                if (this.audioTitle) {
+                    audioTitle.textContent = decodeURIComponent(this.audioTitle);
+                    document.title = `播放: ${decodeURIComponent(this.audioTitle)}`;
+                }
+
+                // 设置音频源
+                audioPlayer.src = this.audioUrl;
+
+                // 添加事件监听器
+                audioPlayer.addEventListener('loadstart', () => {
+                    this.showLoading(true);
+                });
+
+                audioPlayer.addEventListener('canplay', () => {
+                    this.showLoading(false);
+                    this.showPlayer(true);
+                    this.updateAudioInfo();
+                });
+
+                audioPlayer.addEventListener('error', (e) => {
+                    this.showLoading(false);
+                    this.showError('音频加载失败，请检查文件是否存在或网络连接。');
+                    console.error('Audio error:', e);
+                });
+
+                audioPlayer.addEventListener('play', () => {
+                    this.playCount++;
+                    this.updatePlayCount();
+                });
+
+                audioPlayer.addEventListener('loadedmetadata', () => {
+                    this.updateDuration();
+                });
+            }
+
+            // 加载音频
+            loadAudio() {
+                const audioPlayer = document.getElementById('audioPlayer');
+                audioPlayer.load();
+            }
+
+            // 显示/隐藏加载状态
+            showLoading(show) {
+                const loadingMessage = document.getElementById('loadingMessage');
+                loadingMessage.style.display = show ? 'flex' : 'none';
+            }
+
+            // 显示/隐藏播放器
+            showPlayer(show) {
+                const audioPlayer = document.getElementById('audioPlayer');
+                const audioInfo = document.getElementById('audioInfo');
+                audioPlayer.style.display = show ? 'block' : 'none';
+                audioInfo.style.display = show ? 'block' : 'none';
+            }
+
+            // 显示错误信息
+            showError(message) {
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+
+            // 更新音频信息
+            updateAudioInfo() {
+                // 获取文件大小（通过HEAD请求）
+                this.getFileSize();
+            }
+
+            // 获取文件大小
+            async getFileSize() {
+                try {
+                    const response = await fetch(this.audioUrl, { method: 'HEAD' });
+                    const contentLength = response.headers.get('content-length');
+                    if (contentLength) {
+                        const sizeInMB = (parseInt(contentLength) / 1024 / 1024).toFixed(2);
+                        document.getElementById('fileSize').textContent = `${sizeInMB} MB`;
+                    }
+                } catch (error) {
+                    console.log('无法获取文件大小:', error);
+                }
+            }
+
+            // 更新播放时长
+            updateDuration() {
+                const audioPlayer = document.getElementById('audioPlayer');
+                if (audioPlayer.duration && !isNaN(audioPlayer.duration)) {
+                    const minutes = Math.floor(audioPlayer.duration / 60);
+                    const seconds = Math.floor(audioPlayer.duration % 60);
+                    document.getElementById('duration').textContent = 
+                        `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                }
+            }
+
+            // 更新播放次数
+            updatePlayCount() {
+                document.getElementById('playCount').textContent = this.playCount;
+            }
+        }
+
+        // 全局函数
+        function shareAudio() {
+            const title = document.getElementById('audioTitle').textContent;
+            const url = window.location.href;
+
+            if (navigator.share) {
+                navigator.share({
+                    title: title,
+                    text: `听听这个音频: ${title}`,
+                    url: url
+                }).catch(err => {
+                    console.log('分享失败:', err);
+                    copyToClipboard(url);
+                });
+            } else {
+                copyToClipboard(url);
+            }
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showMessage('链接已复制到剪贴板！');
+                }).catch(() => {
+                    fallbackCopyTextToClipboard(text);
+                });
+            } else {
+                fallbackCopyTextToClipboard(text);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showMessage('链接已复制到剪贴板！');
+            } catch (err) {
+                showMessage('复制失败，请手动复制链接');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function downloadAudio() {
+            const params = new URLSearchParams(window.location.search);
+            const audioUrl = params.get('audio');
+            const title = params.get('title') || 'audio';
+            
+            if (audioUrl) {
+                const link = document.createElement('a');
+                link.href = audioUrl;
+                link.download = decodeURIComponent(title);
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showMessage('开始下载音频文件...');
+            }
+        }
+
+        function goBack() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.close();
+            }
+        }
+
+        function showMessage(message) {
+            // 创建临时消息提示
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                font-weight: 600;
+                z-index: 1000;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+                animation: slideIn 0.3s ease;
+            `;
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+
+            // 3秒后移除
+            setTimeout(() => {
+                if (messageDiv.parentElement) {
+                    messageDiv.remove();
+                }
+            }, 3000);
+        }
+
+        // 初始化播放器
+        let player;
+        document.addEventListener('DOMContentLoaded', function() {
+            player = new AudioPlayer();
+        });
+
+        // 添加键盘快捷键支持
+        document.addEventListener('keydown', function(e) {
+            const audioPlayer = document.getElementById('audioPlayer');
+            if (!audioPlayer) return;
+
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    if (audioPlayer.paused) {
+                        audioPlayer.play();
+                    } else {
+                        audioPlayer.pause();
+                    }
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    audioPlayer.currentTime = Math.max(0, audioPlayer.currentTime - 10);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    audioPlayer.currentTime = Math.min(audioPlayer.duration, audioPlayer.currentTime + 10);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    audioPlayer.volume = Math.min(1, audioPlayer.volume + 0.1);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    audioPlayer.volume = Math.max(0, audioPlayer.volume - 0.1);
+                    break;
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频二维码生成器</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 音频二维码生成器</h1>
+        
+        <!-- 安全提示 -->
+        <div class="security-notice">
+            <h3>🔒 安全提示</h3>
+            <p>请确保您的API密钥安全，不要在公开场合分享。建议使用配置文件管理密钥信息。</p>
+        </div>
+
+        <!-- 配置区域 -->
+        <div class="config-section">
+            <h3>⚙️ 腾讯云配置</h3>
+            <div class="config-grid">
+                <div class="config-item">
+                    <label>SecretId:</label>
+                    <input type="password" id="secretId" placeholder="输入您的SecretId">
+                </div>
+                <div class="config-item">
+                    <label>SecretKey:</label>
+                    <input type="password" id="secretKey" placeholder="输入您的SecretKey">
+                </div>
+                <div class="config-item">
+                    <label>存储桶名称:</label>
+                    <input type="text" id="bucket" placeholder="your-bucket-name">
+                </div>
+                <div class="config-item">
+                    <label>地域:</label>
+                    <select id="region">
+                        <option value="ap-beijing">北京 (ap-beijing)</option>
+                        <option value="ap-shanghai">上海 (ap-shanghai)</option>
+                        <option value="ap-guangzhou">广州 (ap-guangzhou)</option>
+                        <option value="ap-chengdu">成都 (ap-chengdu)</option>
+                        <option value="ap-nanjing">南京 (ap-nanjing)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="config-actions">
+                <button onclick="loadConfig()" class="btn-secondary">加载配置文件</button>
+                <button onclick="testConnection()" class="btn-secondary">测试连接</button>
+                <button onclick="loadAudioFiles()" class="btn-primary">🔄 加载音频文件</button>
+            </div>
+        </div>
+
+        <!-- 统计信息 -->
+        <div id="statsSection" class="stats-section" style="display: none;">
+            <div class="stat-item">
+                <span class="stat-number" id="totalFiles">0</span>
+                <span class="stat-label">音频文件</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="totalSize">0</span>
+                <span class="stat-label">总大小(MB)</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="generatedQR">0</span>
+                <span class="stat-label">已生成二维码</span>
+            </div>
+        </div>
+
+        <!-- 操作区域 -->
+        <div class="actions" id="actionsSection" style="display: none;">
+            <button onclick="generateAllQR()" class="btn-primary">🎯 生成所有二维码</button>
+            <button onclick="downloadAllQR()" class="btn-success">📥 批量下载二维码</button>
+            <button onclick="clearAll()" class="btn-warning">🗑️ 清空所有</button>
+        </div>
+
+        <!-- 加载状态 -->
+        <div id="loadingSection" class="loading-section" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>正在加载音频文件...</p>
+        </div>
+
+        <!-- 音频文件列表 -->
+        <div id="audioList" class="audio-list"></div>
+    </div>
+
+    <!-- 引入必要的库 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cos-js-sdk-v5@1.4.20/dist/cos-js-sdk-v5.min.js"></script>
+    
+    <!-- 配置文件 (如果存在) -->
+    <script src="config.local.js" onerror="console.log('配置文件未找到，请手动输入配置信息')"></script>
+    
+    <!-- 主要逻辑 -->
+    <script src="js/app.js"></script>
+</body>
+</html> 
