@@ -85,7 +85,67 @@
 
     <!-- 引入必要的库 -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cos-js-sdk-v5@1.4.20/dist/cos-js-sdk-v5.min.js"></script>
+    
+    <!-- 备用二维码库加载检查 -->
+    <script>
+        // 检查QRCode库是否加载成功，如果失败则加载备用库
+        window.addEventListener('load', function() {
+            if (typeof QRCode === 'undefined') {
+                console.log('主要QRCode库加载失败，尝试备用库...');
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+                script.onload = function() {
+                    console.log('备用QRCode库加载成功');
+                    // 如果是老版本的库，需要兼容处理
+                    if (typeof QRCode === 'undefined' && typeof qrcode !== 'undefined') {
+                        window.QRCode = {
+                            toCanvas: function(canvas, text, callback) {
+                                try {
+                                    const qr = qrcode(0, 'M');
+                                    qr.addData(text);
+                                    qr.make();
+                                    
+                                    const ctx = canvas.getContext('2d');
+                                    const size = 256;
+                                    canvas.width = size;
+                                    canvas.height = size;
+                                    
+                                    const moduleCount = qr.getModuleCount();
+                                    const cellSize = size / moduleCount;
+                                    
+                                    ctx.fillStyle = '#ffffff';
+                                    ctx.fillRect(0, 0, size, size);
+                                    
+                                    ctx.fillStyle = '#000000';
+                                    for (let row = 0; row < moduleCount; row++) {
+                                        for (let col = 0; col < moduleCount; col++) {
+                                            if (qr.isDark(row, col)) {
+                                                ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (callback) callback();
+                                } catch (error) {
+                                    console.error('二维码生成失败:', error);
+                                    if (callback) callback(error);
+                                }
+                            }
+                        };
+                    }
+                };
+                script.onerror = function() {
+                    console.error('所有QRCode库都加载失败');
+                    alert('二维码库加载失败，请检查网络连接或刷新页面重试');
+                };
+                document.head.appendChild(script);
+            } else {
+                console.log('QRCode库加载成功');
+            }
+        });
+    </script>
     
     <!-- 配置文件 (如果存在) -->
     <script src="config.local.js" onerror="console.log('配置文件未找到，请手动输入配置信息')"></script>
